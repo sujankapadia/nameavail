@@ -1,31 +1,14 @@
 import json
 import shutil
 import subprocess
-import urllib.error
-import urllib.request
+
+from .http import REQUEST_TIMEOUT, check_exists
+
+GITHUB_URL = "https://github.com/{name}"
 
 
 def check_github_org(name: str) -> dict:
-    url = f"https://github.com/{name}"
-    req = urllib.request.Request(url, method="GET")
-    req.add_header("User-Agent", "nameavail/0.1")
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return {"available": False}
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return {"available": True}
-        if e.code == 429:
-            try:
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    return {"available": False}
-            except urllib.error.HTTPError as e2:
-                if e2.code == 404:
-                    return {"available": True}
-                return {"available": None, "error": f"HTTP {e2.code}"}
-        return {"available": None, "error": f"HTTP {e.code}"}
-    except (urllib.error.URLError, TimeoutError):
-        return {"available": None, "error": "connection failed"}
+    return check_exists(GITHUB_URL.format(name=name))
 
 
 def check_github_repos(name: str) -> dict:
@@ -37,7 +20,7 @@ def check_github_repos(name: str) -> dict:
             ["gh", "search", "repos", name, "--limit", "5", "--json", "fullName,description"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=REQUEST_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
         return {"available": None, "error": "gh search timed out"}

@@ -3,7 +3,7 @@ import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .checks import ALL_CHECKS
+from .checks import ECOSYSTEMS, get_checks
 from .formatters import format_json, format_single, format_table
 
 NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
@@ -20,10 +20,11 @@ def validate_name(name: str) -> str | None:
     return None
 
 
-def check_name(name: str) -> dict:
+def check_name(name: str, ecosystem: str) -> dict:
+    checks = get_checks(ecosystem)
     results = {}
-    with ThreadPoolExecutor(max_workers=len(ALL_CHECKS)) as pool:
-        futures = {pool.submit(fn, name): label for label, fn in ALL_CHECKS}
+    with ThreadPoolExecutor(max_workers=len(checks)) as pool:
+        futures = {pool.submit(fn, name): label for label, fn in checks}
         for future in as_completed(futures):
             label = futures[future]
             try:
@@ -36,13 +37,20 @@ def check_name(name: str) -> dict:
 def run(args: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="nameavail",
-        description="Check project name availability across PyPI, GitHub, and domains.",
+        description="Check project name availability across package registries, GitHub, and domains.",
     )
     parser.add_argument("names", nargs="+", help="One or more names to check")
     parser.add_argument("--json", action="store_true", dest="json_output", help="Output as JSON")
+    parser.add_argument(
+        "--ecosystem", "-e",
+        choices=ECOSYSTEMS,
+        default="python",
+        help="Package ecosystem to check (default: python)",
+    )
 
     parsed = parser.parse_args(args)
     names: list[str] = parsed.names
+    ecosystem: str = parsed.ecosystem
 
     # Validate all names
     for name in names:
@@ -54,7 +62,7 @@ def run(args: list[str] | None = None) -> int:
     # Run checks
     all_results: dict[str, dict] = {}
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENCY) as pool:
-        futures = {pool.submit(check_name, name): name for name in names}
+        futures = {pool.submit(check_name, name, ecosystem): name for name in names}
         for future in as_completed(futures):
             name = futures[future]
             all_results[name] = future.result()
@@ -62,12 +70,16 @@ def run(args: list[str] | None = None) -> int:
     # Preserve input order
     all_results = {name: all_results[name] for name in names}
 
+    # Determine registry label for formatting
+    checks = get_checks(ecosystem)
+    registry_label = checks[0][0]
+
     # Output
     if parsed.json_output:
         print(format_json(all_results, single=len(names) == 1))
     elif len(names) == 1:
         print(format_single(names[0], all_results[names[0]]))
     else:
-        print(format_table(all_results))
+        print(format_table(all_results, registry_label=registry_label))
 
     return 0

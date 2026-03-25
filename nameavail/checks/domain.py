@@ -1,6 +1,8 @@
 import shutil
 import subprocess
 
+from .http import REQUEST_TIMEOUT
+
 
 def check_domain_com(name: str) -> dict:
     if not shutil.which("whois"):
@@ -12,7 +14,7 @@ def check_domain_com(name: str) -> dict:
             ["whois", domain],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=REQUEST_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
         return {"available": None, "error": "whois timed out"}
@@ -35,7 +37,7 @@ def check_domain_ai(name: str) -> dict:
             ["dig", "+short", domain, "A"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=REQUEST_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
         return {"available": None, "error": "dig timed out"}
@@ -48,7 +50,7 @@ def check_domain_ai(name: str) -> dict:
                 ["dig", "+short", domain, "NS"],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=REQUEST_TIMEOUT,
             )
         except subprocess.TimeoutExpired:
             return {"available": None, "error": "dig timed out"}

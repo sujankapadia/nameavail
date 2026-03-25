@@ -87,10 +87,10 @@ def format_single(name: str, results: dict) -> str:
     return "\n".join(lines)
 
 
-def format_table(all_results: dict[str, dict]) -> str:
-    headers = ["Name", "PyPI", "GitHub org", "Repos", ".com", ".ai"]
-    check_keys = ["PyPI", "GitHub org", "GitHub repos", ".com domain", ".ai domain"]
-    short_headers = ["Name", "PyPI", "GitHub org", "Repos", ".com", ".ai"]
+def format_table(all_results: dict[str, dict], registry_label: str = "PyPI") -> str:
+    registry_key = registry_label
+    check_keys = [registry_key, "GitHub org", "GitHub repos", ".com domain", ".ai domain"]
+    short_headers = ["Name", registry_key, "GitHub org", "Repos", ".com", ".ai"]
 
     rows = []
     for name, results in all_results.items():
