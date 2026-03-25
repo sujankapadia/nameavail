@@ -34,18 +34,59 @@ def check_name(name: str, ecosystem: str) -> dict:
     return results
 
 
+HELP_TEXT = """\
+nameavail — check whether a project name is available across package
+registries, GitHub, and domains.
+
+Checks performed:
+  Registry    PyPI (python), npm (node), or crates.io (rust)
+  GitHub org  Whether the GitHub organization/username is taken
+  GitHub repos  Search for repositories with the same or similar names
+  .com domain   Whois lookup for <name>.com
+  .ai domain    DNS lookup for <name>.ai
+
+Names must be lowercase, start with a letter, and contain only
+letters, digits, hyphens, or underscores.
+
+Examples:
+  nameavail myproject                     Check one name (Python ecosystem)
+  nameavail myproject --ecosystem node    Check against npm instead of PyPI
+  nameavail myproject -e rust             Check against crates.io
+  nameavail foo bar baz                   Check multiple names (table output)
+  nameavail myproject --json              Machine-readable JSON output
+  nameavail foo bar --json                Bulk JSON (returns an array)
+
+Output formats:
+  Single name    Vertical list with status icons and details
+  Multiple names Compact table, one row per name
+  --json         Structured JSON (object for single, array for bulk)
+
+Status icons:
+  ✓  available
+  ✗  taken / registered
+  ~  inconclusive or similar matches found
+  -  check skipped (missing system tool)
+
+System tool requirements:
+  whois   .com domain check (pre-installed on macOS)
+  dig     .ai domain check (pre-installed on macOS)
+  gh      GitHub repo search (optional — other checks still run without it)
+"""
+
+
 def run(args: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="nameavail",
-        description="Check project name availability across package registries, GitHub, and domains.",
+        description=HELP_TEXT,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("names", nargs="+", help="One or more names to check")
-    parser.add_argument("--json", action="store_true", dest="json_output", help="Output as JSON")
+    parser.add_argument("--json", action="store_true", dest="json_output", help="Machine-readable JSON output")
     parser.add_argument(
         "--ecosystem", "-e",
         choices=ECOSYSTEMS,
         default="python",
-        help="Package ecosystem to check (default: python)",
+        help="Package ecosystem: python (PyPI), node (npm), rust (crates.io). Default: python",
     )
 
     parsed = parser.parse_args(args)
